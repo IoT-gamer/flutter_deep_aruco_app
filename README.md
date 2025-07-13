@@ -1,7 +1,6 @@
 # Flutter DeepArUco App
 
-<img src="docs/assets/demo.jpg" alt="drawing" height="300"/> 
-<img src="docs/assets/demo_debug_view.jpg" alt="drawing" height="300"/>
+<img src="docs/assets/demo.jpg" alt="drawing" height="300"/> <img src="docs/assets/demo_debug_view.jpg" alt="drawing" height="300"/>
 
 ## Introduction
 
@@ -111,10 +110,15 @@ To get a local copy up and running, follow these simple steps.
     ```sh
     flutter run
     ```
+
 ## Limitations
 - Markers must be 6x6
 - Currently only one marker detected at a time
 - Currently the decoder is using `DICT_6X6_250`
+
+## Troubleshooting
+- Ignore this error: `Error: unable to find directory entry in pubspec.yaml: /home/<user>/.pub-cache/hosted/pub.dev/ultralytics_yolo-0.1.27/example/assets/`
+    - [reference](https://github.com/ultralytics/yolo-flutter-app/issues/231)
 
 ## License
 
