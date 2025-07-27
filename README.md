@@ -1,6 +1,6 @@
 # Flutter DeepArUco App
 
-<img src="docs/assets/demo.jpg" alt="drawing" height="300"/> <img src="docs/assets/demo_debug_view.jpg" alt="drawing" height="300"/>
+<img src="docs/assets/demo.jpg" alt="drawing" height="300"/> <img src="docs/assets/demo_debug_view.jpg" alt="drawing" height="300"/> <img src="docs/assets/demo_overlay_image.jpg" alt="drawing" height="300"/>
 
 ## Introduction
 
@@ -15,6 +15,7 @@ This application leverages a deep learning pipeline to provide robust marker tra
 
 - **Real-time Marker Detection:** Uses the device camera to find ArUco markers in the video stream.
 - **Robust Decoding:** Implements a multi-stage pipeline to accurately identify marker IDs even under poor lighting.
+- **Augmented Reality (AR) Overlay:** Overlays a custom image onto detected ArUco markers in real-time.
 - **Cross-Platform (in progress):** Built with Flutter for deployment on both Android and iOS from a single codebase.
 - **Debug View:** An optional overlay to visualize the heatmap and warped binary images from the processing pipeline.
 
@@ -24,7 +25,7 @@ The application follows the three-stage pipeline proposed by the DeepArUco++ fra
 
 1.  **Marker Detection (YOLO):** A YOLO-based model first detects the approximate location of one ArUco marker in the camera frame, drawing a bounding box around them.
 2.  **Corner Refinement:** The region of interest from the first stage is passed to a second model that refines the location of the marker's four corners with high precision. This is done by analyzing a generated heatmap to find the corner coordinates.
-3.  **Marker Decoding:** Once the corners are accurately located, the marker is rectified (warped into a flat square), and a final model decodes the binary pattern to determine its unique ID.
+3.  **Marker Decoding:** Once the corners are accurately located, the marker is rectified (warped into a flat square), and a final model decodes the binary pattern to determine its unique ID. The AR overlay is applied in this stage.
 
 ## Models
 

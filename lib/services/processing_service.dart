@@ -26,7 +26,6 @@ class MarkerResult {
 class _CropIsolateData {
   final CameraImage image;
   final Rect box;
-
   _CropIsolateData(this.image, this.box);
 }
 
@@ -36,11 +35,11 @@ class _CropIsolateData {
 Float32List _cropAndResize(_CropIsolateData isolateData) {
   final image = isolateData.image;
   final box = isolateData.box;
-  const int targetSize = 64; // The refiner model's input size
+  const int targetSize = 64;
+  // The refiner model's input size
 
   final imageWidth = image.width;
   final imageHeight = image.height;
-
   // 1. Expand the box to get more context for the refiner model
   const double expansionFactor = 0.20;
   final double widthAdjustment = box.width * expansionFactor / 2.0;
@@ -51,7 +50,6 @@ Float32List _cropAndResize(_CropIsolateData isolateData) {
     min(1.0, box.right + widthAdjustment),
     min(1.0, box.bottom + heightAdjustment),
   );
-
   // 2. Calculate pixel coordinates for the crop area
   final int cropLeft = (expandedBox.left * imageWidth).toInt();
   final int cropTop = (expandedBox.top * imageHeight).toInt();
@@ -65,7 +63,6 @@ Float32List _cropAndResize(_CropIsolateData isolateData) {
   final yStride = image.planes[0].bytesPerRow;
   final uvStride = image.planes[1].bytesPerRow;
   final uvPixelStride = image.planes[1].bytesPerPixel!;
-
   // 4. Create the Float32List to hold the final RGB data for the model
   final imageAsList = Float32List(targetSize * targetSize * 3);
   int listIndex = 0;
@@ -76,22 +73,18 @@ Float32List _cropAndResize(_CropIsolateData isolateData) {
       // Map the 64x64 grid coordinate to the original image's crop area coordinate
       final int originalX = cropLeft + (x * cropWidth / targetSize).toInt();
       final int originalY = cropTop + (y * cropHeight / targetSize).toInt();
-
       // Get the YUV values for the pixel in the original image
       final yIndex = originalY * yStride + originalX;
       final uvIndex =
           (originalY / 2).floor() * uvStride +
           (originalX / 2).floor() * uvPixelStride;
-
       final yp = yPlane[yIndex];
       final up = uPlane[uvIndex];
       final vp = vPlane[uvIndex];
-
       // YUV to RGB conversion
       double r = (yp + vp * 1436 / 1024 - 179);
       double g = (yp - up * 46549 / 131072 + 44 - vp * 93604 / 131072 + 91);
       double b = (yp + up * 1814 / 1024 - 227);
-
       // Normalize and add to the list
       imageAsList[listIndex++] = r.clamp(0, 255) / 255.0;
       imageAsList[listIndex++] = g.clamp(0, 255) / 255.0;
@@ -106,7 +99,6 @@ class ProcessingService {
   late final Interpreter _refiner;
   late final StatefulIsolate _isolate;
   // late final cv.SimpleBlobDetector _blobDetector;
-
   late final cv.ArucoDictionary _arucoDictionary;
 
   // Add controllers to broadcast the debug images
@@ -121,11 +113,11 @@ class ProcessingService {
     _isolate = StatefulIsolate(
       backpressureStrategy: ReplaceBackpressureStrategy(),
     );
-
     _arucoDictionary = cv.ArucoDictionary.predefined(
       cv.PredefinedDictionaryType.DICT_6X6_250,
     );
-    // Create the blob detector. These parameters can be tuned.
+    // Create the blob detector.
+    // These parameters can be tuned.
     // // Create a parameters object for the blob detector.
     // final params = cv.SimpleBlobDetectorParams(
     //   // Add the required thresholding parameters
@@ -139,7 +131,8 @@ class ProcessingService {
     //   filterByColor: true,
     //   blobColor: 255,
 
-    //   // Filter by area to find reasonably sized corner blobs.
+    //
+    //   //  // Filter by area to find reasonably sized corner blobs.
     //   filterByArea: true,
     //   minArea: 4.0, // Adjust these values as needed
     //   maxArea: 100.0,
@@ -150,7 +143,8 @@ class ProcessingService {
     //   maxCircularity: 1.0,
 
     //   // Other filters can be disabled for now.
-    //   filterByConvexity: false,
+    //
+    // filterByConvexity: false,
     //   minConvexity: 0.2,
     //   maxConvexity: 1.0,
     //   filterByInertia: false,
@@ -180,7 +174,6 @@ class ProcessingService {
       final reshapedInput = inputTensor.reshape([1, 64, 64, 3]);
       final output = List.filled(1 * 64 * 64 * 1, 0.0).reshape([1, 64, 64, 1]);
       _refiner.run(reshapedInput, output);
-
       // Return BOTH the input tensor and the output heatmap
       return (inputTensor, output);
     } catch (e) {
@@ -209,23 +202,19 @@ class ProcessingService {
       heatmapFloat = cv.Mat.fromList(64, 64, cv.MatType.CV_32FC1, outputList);
 
       heatmapByte = heatmapFloat.convertTo(cv.MatType.CV_8UC1, alpha: 255);
-
       // Stream heatmap
-      // imencode returns a record (bool success, Uint8List data). We need the data part (.$2).
+      // imencode returns a record (bool success, Uint8List data).
+      // We need the data part (.$2).
       final Uint8List encodedHeatmap = cv.imencode('.jpg', heatmapByte).$2;
-
       // Add the encoded heatmap bytes to the stream
       _heatmapStreamController.add(encodedHeatmap);
-
       // Lower the threshold to capture more of the heatmap blob.
       thresholded = cv
           .threshold(heatmapByte, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)
           .$2;
-
       contours = cv
           .findContours(thresholded, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
           .$1;
-
       final contourList = contours.toList();
       contourList.sort(
         (a, b) => cv.contourArea(b).compareTo(cv.contourArea(a)),
@@ -239,7 +228,6 @@ class ProcessingService {
         double weightedX = 0;
         double weightedY = 0;
         double totalWeight = 0;
-
         for (int y = rect.y; y < rect.y + rect.height; y++) {
           for (int x = rect.x; x < rect.x + rect.width; x++) {
             point2f = cv.Point2f(x.toDouble(), y.toDouble());
@@ -277,24 +265,48 @@ class ProcessingService {
     }
   }
 
-  Future<MarkerResult?> decodeMarker(
+  Future<(MarkerResult?, Uint8List?)> decodeMarker(
+    // Modified return type
+    cv.Mat fullFrameMat, //The original camera frame as cv.Mat
     Float32List croppedImageTensor,
     List<SimplePoint> corners,
+    Uint8List overlayImageBytes, // The image to overlay
+    Rect detectionBox, // The original detection box for scaling corners
   ) async {
-    if (corners.length != 4) return null;
+    if (corners.length != 4) return (null, null); // Modified to return nulls
     cv.Mat? croppedMat;
-    cv.VecPoint? srcPoints;
-    cv.VecPoint? dstPoints;
+    cv.VecPoint? srcPointsVec;
+    cv.VecPoint? dstPointsVec;
     cv.Mat? transform;
     cv.Mat? warped;
     cv.Mat? warpedGray;
     cv.Mat? warpedGray8bit;
     cv.Mat? binaryMarker;
     cv.Mat? bits;
+    // variables for image overlay
+    cv.Mat? overlayMat;
+    cv.Mat? warpedOverlay;
+    cv.Mat? mask;
+    cv.Mat? element;
+    cv.Mat? imOut;
+    cv.Mat? h; // Homography matrix
 
+    // Calculate actual pixel coordinates of the expanded box in the original frame
+    const double expansionFactor = 0.20;
+    final double widthAdjustment = detectionBox.width * expansionFactor / 2.0;
+    final double heightAdjustment = detectionBox.height * expansionFactor / 2.0;
+    final expandedBox = Rect.fromLTRB(
+      max(0.0, detectionBox.left - widthAdjustment),
+      max(0.0, detectionBox.top - heightAdjustment),
+      min(1.0, detectionBox.right + widthAdjustment),
+      min(1.0, detectionBox.bottom + heightAdjustment),
+    );
+    final int cropLeft = (expandedBox.left * fullFrameMat.cols).toInt();
+    final int cropTop = (expandedBox.top * fullFrameMat.rows).toInt();
+    final int cropWidth = (expandedBox.width * fullFrameMat.cols).toInt();
+    final int cropHeight = (expandedBox.height * fullFrameMat.rows).toInt();
     try {
       List<SimplePoint> cornersCopy = List.from(corners);
-
       // Top-left has the smallest sum of x+y
       // Bottom-right has the largest sum of x+y
       cornersCopy.sort((a, b) => (a.x + a.y).compareTo(b.x + b.y));
@@ -317,7 +329,6 @@ class ProcessingService {
               (cornersCopy.last.y - cornersCopy.last.x)
           ? cornersCopy.last
           : cornersCopy.first;
-
       // The canonical corner order for OpenCV ArUco
       final List<SimplePoint> canonicalCorners = [
         topLeft,
@@ -325,27 +336,22 @@ class ProcessingService {
         bottomRight,
         bottomLeft,
       ];
-
       // The perspectiveCorners list from the previous step is still needed
       // to keep the warped image in the debug view upright.
-      final List<SimplePoint> perspectiveCorners = [
-        canonicalCorners[3], // Bottom-Left
-        canonicalCorners[0], // Top-Left
-        canonicalCorners[1], // Top-Right
-        canonicalCorners[2], // Bottom-Right
+      final List<cv.Point> perspectiveCornersCv = [
+        cv.Point(canonicalCorners[3].x, canonicalCorners[3].y), // Bottom-Left
+        cv.Point(canonicalCorners[0].x, canonicalCorners[0].y), // Top-Left
+        cv.Point(canonicalCorners[1].x, canonicalCorners[1].y), // Top-Right
+        cv.Point(canonicalCorners[2].x, canonicalCorners[2].y), // Bottom-Right
       ];
-
       croppedMat = cv.Mat.fromList(
         64,
         64,
         cv.MatType.CV_32FC3,
         croppedImageTensor,
       );
-
-      final srcPointsList = perspectiveCorners
-          .map((p) => cv.Point(p.x, p.y))
-          .toList();
-      srcPoints = cv.VecPoint.fromList(srcPointsList);
+      // For getPerspectiveTransform, we use VecPoint
+      srcPointsVec = cv.VecPoint.fromList(perspectiveCornersCv);
 
       const int warpedSize = 80;
       final dstPointsList = [
@@ -354,13 +360,13 @@ class ProcessingService {
         cv.Point(warpedSize - 1, warpedSize - 1),
         cv.Point(0, warpedSize - 1),
       ];
-      dstPoints = cv.VecPoint.fromList(dstPointsList);
-      transform = cv.getPerspectiveTransform(srcPoints, dstPoints);
+      dstPointsVec = cv.VecPoint.fromList(dstPointsList);
+
+      transform = cv.getPerspectiveTransform(srcPointsVec, dstPointsVec);
       warped = cv.warpPerspective(croppedMat, transform, (
         warpedSize,
         warpedSize,
       ));
-
       warpedGray = cv.cvtColor(warped, cv.COLOR_RGB2GRAY);
       warpedGray8bit = warpedGray.convertTo(cv.MatType.CV_8UC1, alpha: 255);
       binaryMarker = cv
@@ -368,7 +374,6 @@ class ProcessingService {
           .$2;
       final encodedWarpedBinary = cv.imencode('.jpg', binaryMarker).$2;
       _warpedStreamController.add(encodedWarpedBinary);
-
       const gridSize = 6;
       const borderSize = 1;
       const totalBlocks = gridSize + 2 * borderSize;
@@ -392,24 +397,112 @@ class ProcessingService {
         bits,
         2.0,
       );
-
+      // --- Image Overlay Logic ---
       if (found) {
-        return MarkerResult(id, rotation, canonicalCorners);
+        // Map canonicalCorners (from 64x64 heatmap) back to original frame coordinates
+        final List<cv.Point> ptsDstCvPointsOverlay = canonicalCorners.map((p) {
+          // p.x and p.y are 0-63 relative to the 64x64 cropped image
+          final int originalX = cropLeft + (p.x * cropWidth / 64.0).toInt();
+          final int originalY = cropTop + (p.y * cropHeight / 64.0).toInt();
+          return cv.Point(originalX, originalY);
+        }).toList();
+        // Define source points for the overlay image (corners of the image itself)
+        overlayMat = cv.imdecode(overlayImageBytes, cv.IMREAD_UNCHANGED);
+        // rotate the overlay image 90 counter-clockwise
+
+        overlayMat = cv.rotate(overlayMat, cv.ROTATE_90_COUNTERCLOCKWISE);
+        if (overlayMat.isEmpty) {
+          print('Failed to decode overlay image.');
+          return (null, null); // Modified to return nulls
+        }
+
+        // Convert overlay image to 3 channels (BGR) if it's RGBA
+        if (overlayMat.channels == 4) {
+          final tempOverlay = cv.cvtColor(overlayMat, cv.COLOR_RGBA2RGB);
+          overlayMat.dispose();
+          overlayMat = tempOverlay;
+        }
+
+        final List<cv.Point> ptsSrcCvPointsOverlay = [
+          cv.Point(0, 0),
+          cv.Point(overlayMat.cols - 1, 0),
+          cv.Point(overlayMat.cols - 1, overlayMat.rows - 1),
+          cv.Point(0, overlayMat.rows - 1),
+        ];
+        final cv.VecPoint srcPointsForTransform = cv.VecPoint.fromList(
+          ptsSrcCvPointsOverlay,
+        );
+        final cv.VecPoint dstPointsForTransform = cv.VecPoint.fromList(
+          ptsDstCvPointsOverlay,
+        );
+        // Compute perspective transform
+        h = cv.getPerspectiveTransform(
+          srcPointsForTransform,
+          dstPointsForTransform,
+        );
+        // Dispose VecPoint objects after use
+        srcPointsForTransform.dispose();
+        dstPointsForTransform.dispose();
+        // Warp source image to destination based on homography
+        warpedOverlay = cv.warpPerspective(overlayMat, h, (
+          fullFrameMat.cols,
+          fullFrameMat.rows,
+        ), flags: cv.INTER_CUBIC);
+        // Prepare a mask representing region to copy from the warped image into the original frame.
+        mask = cv.Mat.zeros(
+          fullFrameMat.rows,
+          fullFrameMat.cols,
+          cv.MatType.CV_8UC1,
+        );
+        // For fillPoly, we need VecVecPoint.
+        // The list of points for fillPoly should be integer points.
+        final List<cv.Point> ptsDstFillPoly = canonicalCorners.map((p) {
+          final int originalX = cropLeft + (p.x * cropWidth / 64.0).toInt();
+          final int originalY = cropTop + (p.y * cropHeight / 64.0).toInt();
+          return cv.Point(originalX, originalY);
+        }).toList();
+        // Wrap the polygon points in a List<List<Point>> for VecVecPoint.fromList
+        cv.fillPoly(
+          mask,
+          cv.VecVecPoint.fromList([ptsDstFillPoly]),
+          cv.Scalar(255, 255, 255),
+        );
+        // Erode the mask to not copy the boundary effects from the warping
+        element = cv.getStructuringElement(cv.MORPH_RECT, (3, 3));
+        cv.erode(mask, element, dst: mask);
+
+        // Copy the masked warped image into the original frame in the mask region.
+        imOut = fullFrameMat.clone(); // Clone the original frame to draw on
+        warpedOverlay.copyTo(imOut, mask: mask);
+        // Stream the final image with overlay
+        final Uint8List encodedOverlayedFrame = cv.imencode('.jpg', imOut).$2;
+
+        // Dispose the homography matrix
+        h.dispose();
+        return (
+          MarkerResult(id, rotation, canonicalCorners),
+          encodedOverlayedFrame,
+        ); // Return the image
       }
-      return null;
+      return (null, null); // Modified to return nulls
     } catch (e) {
       print('Error in ProcessingService.decodeMarker: $e');
-      return null;
+      return (null, null); // Modified to return nulls
     } finally {
       croppedMat?.dispose();
-      srcPoints?.dispose();
-      dstPoints?.dispose();
+      srcPointsVec?.dispose();
+      dstPointsVec?.dispose();
       transform?.dispose();
       warped?.dispose();
       warpedGray?.dispose();
       warpedGray8bit?.dispose();
       binaryMarker?.dispose();
       bits?.dispose();
+      overlayMat?.dispose();
+      warpedOverlay?.dispose();
+      mask?.dispose();
+      element?.dispose();
+      imOut?.dispose();
     }
   }
 
