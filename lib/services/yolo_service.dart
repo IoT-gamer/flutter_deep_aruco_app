@@ -1,4 +1,3 @@
-// lib/services/yolo_service.dart
 import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
@@ -8,12 +7,11 @@ import 'package:integral_isolates/integral_isolates.dart';
 import 'package:ultralytics_yolo/yolo.dart';
 
 // 1. Create a data class to safely pass CameraImage data to the isolate.
-//    This is identical to the pattern in your hand_landmarker.dart example.
 class _IsolateData {
   final Uint8List yPlane;
   final Uint8List uPlane;
   final Uint8List vPlane;
-  final int yRowStride; // ADD THIS
+  final int yRowStride;
   final int uvRowStride;
   final int uvPixelStride;
   final int width;
@@ -21,7 +19,7 @@ class _IsolateData {
 
   _IsolateData(CameraImage image)
     : yPlane = image.planes[0].bytes,
-      yRowStride = image.planes[0].bytesPerRow, // ADD THIS
+      yRowStride = image.planes[0].bytesPerRow,
       uPlane = image.planes[1].bytes,
       vPlane = image.planes[2].bytes,
       uvRowStride = image.planes[1].bytesPerRow,
@@ -47,13 +45,12 @@ Future<Uint8List?> _convertYuvToJpg(_IsolateData isolateData) async {
     for (int y = 0; y < isolateData.height; y++) {
       for (int x = 0; x < isolateData.width; x++) {
         final int uvIndex =
-            isolateData.uvPixelStride * (x / 2).floor() +
-            isolateData.uvRowStride * (y / 2).floor();
+            uvPixelStride * (x / 2).floor() + uvRowStride * (y / 2).floor();
         final int index = y * yRowStride + x;
 
         final yp = planeY[index];
-        final up = isolateData.uPlane[uvIndex];
-        final vp = isolateData.vPlane[uvIndex];
+        final up = planeU[uvIndex];
+        final vp = planeV[uvIndex];
 
         int r = (yp + vp * 1436 / 1024 - 179).round();
         int g = (yp - up * 46549 / 131072 + 44 - vp * 93604 / 131072 + 91)
