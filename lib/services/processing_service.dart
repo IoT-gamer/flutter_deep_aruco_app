@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -109,6 +110,14 @@ class ProcessingService {
   Stream<Uint8List> get warpedStream => _warpedStreamController.stream;
 
   Future<void> init() async {
+    final options = InterpreterOptions();
+
+    // Enable NNAPI delegate if on Android
+    if (Platform.isAndroid) {
+      options.useNnApiForAndroid = true;
+      print('NNAPI delegate enabled for the refiner model.');
+    }
+
     _refiner = await Interpreter.fromAsset('assets/refiner32.tflite');
     _isolate = StatefulIsolate(
       backpressureStrategy: ReplaceBackpressureStrategy(),
