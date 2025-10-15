@@ -40,7 +40,7 @@ dependencies:
   image: ^4.5.4
   integral_isolates: ^0.5.1
   tflite_flutter: ^0.11.0
-  opencv_dart: ^1.4.2+1
+  opencv_dart: ^1.4.3
 
 dev_dependencies:
   flutter_test:
@@ -97,13 +97,6 @@ flutter:
 hooks:
   user_defines:
     dartcv4:
-      exclude_modules:
-        - dnn
-        - highgui
-        - objdetect
-        - video
-        - videoio
-        - calib3d
       include_modules:
         - core # core is always required thus will be ignored even configured here.
         - imgproc

@@ -24,13 +24,3 @@ plugins {
 
 include(":app")
 
-gradle.beforeProject {
-    if (project.name == "opencv_dart") {
-        project.afterEvaluate {
-            project.extensions.findByType(com.android.build.gradle.LibraryExtension::class.java)?.let {
-                println("Applying ndkVersion to opencv_dart...")
-                it.ndkVersion = "23.1.7779620"
-            }
-        }
-    }
-}

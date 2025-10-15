@@ -61,18 +61,6 @@ This project relies on several key packages:
 For a full list, see the `pubspec.yaml` file.
 
 ### Dependency gradle requirements
-- `opencv_dart` requires ndkVersion assignment in `android/settings.gradle.kts`
-```java
-gradle.beforeProject {
-    if (project.name == "opencv_dart") {
-        project.afterEvaluate {
-            project.extensions.findByType(com.android.build.gradle.LibraryExtension::class.java)?.let {
-                println("Applying ndkVersion to opencv_dart...")
-                it.ndkVersion = "23.1.7779620"
-            }
-        }
-    }
-}
 ```
 - `tflite_flutter` requires update tensorflow dependency in `android/app/build.gradle.kts`:
 ```java
